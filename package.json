@@ -1,0 +1,33 @@
+{
+  "name": "@polyhymnia/audio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./webaudio": {
+      "types": "./dist/webaudio/index.d.ts",
+      "default": "./dist/webaudio/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.webaudio.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webaudio.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@polyhymnia/notation-engine": "workspace:*",
+    "@polyhymnia/notation-model": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "license": "MIT"
+}
