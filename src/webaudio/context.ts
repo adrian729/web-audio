@@ -6,6 +6,10 @@ type ContextConstructor = typeof AudioContext;
 
 let shared: AudioContext | undefined;
 
+export function isRunning(ctx: AudioContext): boolean {
+  return (ctx.state as string) === 'running';
+}
+
 export function createAudioContext(): AudioContext {
   if (shared && (shared.state as string) !== 'closed') return shared;
   const Ctor: ContextConstructor | undefined =
@@ -20,7 +24,7 @@ export function createAudioContext(): AudioContext {
 export function unlockAudio(ctx: AudioContext = createAudioContext()): () => void {
   const events = ['pointerdown', 'pointerup', 'click', 'touchend', 'keydown'] as const;
   const resume = () => {
-    if ((ctx.state as string) === 'running') return;
+    if (isRunning(ctx)) return;
     void ctx.resume().catch(() => {});
   };
   for (const name of events) globalThis.addEventListener(name, resume);

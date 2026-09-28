@@ -1,5 +1,6 @@
 import type { NoteEvent } from '../events.js';
 import type { Instrument } from '../instrument.js';
+import { isRunning } from './context.js';
 
 export type PlayResult = 'ended' | 'stopped' | 'blocked';
 
@@ -16,6 +17,17 @@ export interface Player {
 
 interface ActivationNavigator {
   userActivation?: { hasBeenActive: boolean };
+}
+
+function scheduleEndSignal(ctx: AudioContext, at: number): OscillatorNode {
+  const timer = ctx.createOscillator();
+  const mute = ctx.createGain();
+  mute.gain.value = 0;
+  timer.connect(mute);
+  mute.connect(ctx.destination);
+  timer.start();
+  timer.stop(at);
+  return timer;
 }
 
 function validate(events: readonly NoteEvent[]): void {
@@ -43,7 +55,7 @@ export function createPlayer(ctx: AudioContext, instrument: Instrument): Player 
       const latency = () => ctx.outputLatency ?? ctx.baseLatency ?? 0;
       const startAt = ctx.currentTime + lead;
       const activation = (globalThis.navigator as ActivationNavigator | undefined)?.userActivation;
-      const blocked = (ctx.state as string) !== 'running' && activation?.hasBeenActive === false;
+      const blocked = !isRunning(ctx) && activation?.hasBeenActive === false;
       let end = startAt;
       if (!blocked) {
         for (const e of events) {
@@ -51,12 +63,6 @@ export function createPlayer(ctx: AudioContext, instrument: Instrument): Player 
           end = Math.max(end, startAt + e.start + e.duration);
         }
       }
-
-      const timer = ctx.createOscillator();
-      const mute = ctx.createGain();
-      mute.gain.value = 0;
-      timer.connect(mute);
-      mute.connect(ctx.destination);
 
       let frozen: number | undefined;
       const elapsed = () => Math.max(0, ctx.currentTime - startAt - latency());
@@ -71,9 +77,8 @@ export function createPlayer(ctx: AudioContext, instrument: Instrument): Player 
           resolve(result);
         };
       });
+      const timer = scheduleEndSignal(ctx, end + latency() + 0.1);
       timer.onended = () => settle('ended');
-      timer.start();
-      timer.stop(end + latency() + 0.1);
 
       const playback: Playback = {
         time() {
@@ -99,7 +104,7 @@ export function createPlayer(ctx: AudioContext, instrument: Instrument): Player 
       Promise.resolve(resumed)
         .catch(() => {})
         .then(() => {
-          if ((ctx.state as string) !== 'running' && !done) {
+          if (!isRunning(ctx) && !done) {
             instrument.stopAll();
             timer.stop();
             settle('blocked');
