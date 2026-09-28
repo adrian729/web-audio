@@ -53,16 +53,15 @@ describe('createPlayer', () => {
     expect(calls).not.toContain('on');
   });
 
-  it('throws on an invalid event before scheduling anything', () => {
+  it.each([
+    ['non-finite midi', { midi: NaN, start: 0, duration: 1 }],
+    ['zero duration', { midi: 60, start: 0, duration: 0 }],
+    ['negative duration', { midi: 60, start: 0, duration: -1 }],
+  ])('throws on an invalid event (%s) before scheduling anything', (_name, bad) => {
     const { ctx } = fakeCtx();
     const calls: string[] = [];
     const player = createPlayer(ctx, { noteOn: () => calls.push('on'), stopAll: () => {} });
-    expect(() =>
-      player.play([
-        { midi: 60, start: 0, duration: 1 },
-        { midi: NaN, start: 0, duration: 1 },
-      ]),
-    ).toThrow(RangeError);
+    expect(() => player.play([{ midi: 60, start: 0, duration: 1 }, bad])).toThrow(RangeError);
     expect(calls).toEqual([]);
   });
 });

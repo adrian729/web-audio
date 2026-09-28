@@ -24,7 +24,7 @@ function validate(events: readonly NoteEvent[]): void {
       !Number.isFinite(e.midi) ||
       !Number.isFinite(e.start) ||
       !Number.isFinite(e.duration) ||
-      e.duration < 0 ||
+      e.duration <= 0 ||
       (e.velocity !== undefined && !Number.isFinite(e.velocity))
     ) {
       throw new RangeError('invalid note event');
