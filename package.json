@@ -14,6 +14,10 @@
     "./webaudio": {
       "types": "./dist/webaudio/index.d.ts",
       "default": "./dist/webaudio/index.js"
+    },
+    "./sampler": {
+      "types": "./dist/sampler/index.d.ts",
+      "default": "./dist/sampler/index.js"
     }
   },
   "scripts": {

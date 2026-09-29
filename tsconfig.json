@@ -6,5 +6,5 @@
     "rootDir": "src"
   },
   "include": ["src"],
-  "exclude": ["src/webaudio"]
+  "exclude": ["src/webaudio", "src/sampler"]
 }
