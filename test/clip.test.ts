@@ -25,7 +25,13 @@ const doc = {
             {
               content: [
                 { duration: quarter, rest: {} },
-                { duration: quarter, notes: [{ id: 'c', pitch: pitch('C', 4) }, { id: 'e', pitch: pitch('E', 4) }] },
+                {
+                  duration: quarter,
+                  notes: [
+                    { id: 'c', pitch: pitch('C', 4) },
+                    { id: 'e', pitch: pitch('E', 4) },
+                  ],
+                },
                 { duration: half, notes: [{ id: 'd', pitch: pitch('D', 4) }] },
               ],
             },
@@ -42,9 +48,7 @@ const doc = {
           ],
         },
         {
-          sequences: [
-            { content: [{ duration: { base: 'whole' }, notes: [{ id: 'g2', pitch: pitch('G', 4) }] }] },
-          ],
+          sequences: [{ content: [{ duration: { base: 'whole' }, notes: [{ id: 'g2', pitch: pitch('G', 4) }] }] }],
         },
       ],
     },
