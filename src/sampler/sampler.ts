@@ -21,20 +21,48 @@ interface Voice {
 const ATTACK = 0.004;
 const RELEASE = 0.08;
 const STOP_RAMP = 0.025;
-const SILENCE = 0.01;
 const LEVEL = 0.35;
+const ONSET_FRAME = 0.02;
+const ONSET_HOP = 0.005;
+const ONSET_RATIO = 0.5;
+const ATTACK_WINDOW = 0.3;
 
 function measure(buffer: AudioBuffer): { peak: number; onset: number } {
   const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));
-  let peak = 0;
-  for (const data of channels) for (const v of data) peak = Math.max(peak, Math.abs(v));
-  const floor = peak * SILENCE;
-  let first = buffer.length;
+  const sampleRate = buffer.sampleRate;
+  const frame = Math.max(1, Math.round(ONSET_FRAME * sampleRate));
+  const hop = Math.max(1, Math.round(ONSET_HOP * sampleRate));
+  const frames = Math.max(1, Math.floor(Math.max(0, buffer.length - frame) / hop) + 1);
+
+  // Short-time energy, so a quiet lead-in or noise floor before the note is skipped.
+  const energy = new Float64Array(frames);
   for (const data of channels) {
-    const i = data.findIndex((v) => Math.abs(v) > floor);
-    if (i >= 0) first = Math.min(first, i);
+    for (let f = 0; f < frames; f += 1) {
+      const start = f * hop;
+      const end = Math.min(buffer.length, start + frame);
+      let sum = 0;
+      for (let i = start; i < end; i += 1) sum += data[i]! * data[i]!;
+      energy[f] += sum;
+    }
   }
-  return { peak, onset: first / buffer.sampleRate };
+  let loudest = 0;
+  for (const value of energy) loudest = Math.max(loudest, value);
+  let first = 0;
+  for (let f = 0; f < frames; f += 1) {
+    if (energy[f]! > loudest * ONSET_RATIO) {
+      first = f;
+      break;
+    }
+  }
+
+  // Normalize by the attack, not by any louder resonance later in the file.
+  const onsetSample = first * hop;
+  const windowEnd = Math.min(buffer.length, onsetSample + Math.round(ATTACK_WINDOW * sampleRate));
+  let peak = 0;
+  for (const data of channels) {
+    for (let i = onsetSample; i < windowEnd; i += 1) peak = Math.max(peak, Math.abs(data[i]!));
+  }
+  return { peak, onset: onsetSample / sampleRate };
 }
 
 async function prepare(ctx: AudioContext, { midi, url }: Sample): Promise<Prepared> {
