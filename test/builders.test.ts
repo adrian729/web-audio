@@ -5,7 +5,7 @@ describe('builders', () => {
   it.each([
     [
       'melodic',
-      () => melodic(['C4', 'F#4'], { noteDuration: 1, gap: 0.5 }),
+      () => melodic([60, 66], { noteDuration: 1, gap: 0.5 }),
       [
         [60, 0, 1],
         [66, 1.5, 1],
@@ -13,7 +13,7 @@ describe('builders', () => {
     ],
     [
       'harmonic',
-      () => harmonic([{ step: 'C', octave: 4 }, 'F#4'], { duration: 2 }),
+      () => harmonic([60, 66], { duration: 2 }),
       [
         [60, 0, 2],
         [66, 0, 2],
