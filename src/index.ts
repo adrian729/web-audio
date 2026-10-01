@@ -1,4 +1,4 @@
-export { midiOfPitch, midiToFrequency, type PitchLike } from './pitch.js';
+export { midiToFrequency } from './pitch.js';
 export {
   concat,
   eventsFromTimeMap,

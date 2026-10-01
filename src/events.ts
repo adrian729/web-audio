@@ -1,5 +1,4 @@
 import type { TempoOverride, TimeMap } from '@polyhymnia/notation-engine';
-import { midiOfPitch, type PitchLike } from './pitch.js';
 
 export interface NoteEvent {
   id?: string;
@@ -44,14 +43,14 @@ export function eventsFromTimeMap(timemap: TimeMap, options: EventsOptions = {})
 }
 
 export function melodic(
-  pitches: readonly PitchLike[],
+  midis: readonly number[],
   { noteDuration = 0.5, gap = 0 }: { noteDuration?: number; gap?: number } = {},
 ): NoteEvent[] {
-  return pitches.map((p, i) => ({ midi: midiOfPitch(p), start: i * (noteDuration + gap), duration: noteDuration }));
+  return midis.map((midi, i) => ({ midi, start: i * (noteDuration + gap), duration: noteDuration }));
 }
 
-export function harmonic(pitches: readonly PitchLike[], { duration = 1 }: { duration?: number } = {}): NoteEvent[] {
-  return pitches.map((p) => ({ midi: midiOfPitch(p), start: 0, duration }));
+export function harmonic(midis: readonly number[], { duration = 1 }: { duration?: number } = {}): NoteEvent[] {
+  return midis.map((midi) => ({ midi, start: 0, duration }));
 }
 
 export function shift(events: readonly NoteEvent[], dt: number): NoteEvent[] {
