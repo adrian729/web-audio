@@ -26,12 +26,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@polyhymnia/notation-engine": "workspace:*",
-    "@polyhymnia/mnx": "workspace:*"
+    "@polyhymnia/notation-engine": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "@polyhymnia/mnx": "workspace:*"
   },
   "license": "MIT"
 }
