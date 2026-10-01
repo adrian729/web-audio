@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { layoutScore } from '@polyhymnia/notation-engine';
-import type { MnxDocument } from '@polyhymnia/notation-model';
+import type { MnxDocument } from '@polyhymnia/mnx';
 import { eventsFromTimeMap } from '../src/index.js';
 
 const half = { base: 'half' };

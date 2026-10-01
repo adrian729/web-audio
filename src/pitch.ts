@@ -1,4 +1,4 @@
-import { parsePitch, pitchToMidi, type Pitch } from '@polyhymnia/notation-model';
+import { parsePitch, pitchToMidi, type Pitch } from '@polyhymnia/mnx';
 
 export type PitchLike = number | Pitch | string;
 

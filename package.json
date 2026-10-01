@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@polyhymnia/notation-engine": "workspace:*",
-    "@polyhymnia/notation-model": "workspace:*"
+    "@polyhymnia/mnx": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
