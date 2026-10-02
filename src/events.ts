@@ -1,5 +1,3 @@
-import type { TempoOverride, TimeMap } from '@polyhymnia/notation-engine';
-
 export interface NoteEvent {
   id?: string;
   midi: number;
@@ -9,37 +7,8 @@ export interface NoteEvent {
 }
 
 export interface Clip {
-  events: readonly NoteEvent[];
+  events: NoteEvent[];
   durationSeconds: number;
-  tickAtSeconds(seconds: number): number;
-}
-
-export interface EventsOptions {
-  tempo?: TempoOverride;
-}
-
-export function eventsFromTimeMap(timemap: TimeMap, options: EventsOptions = {}): Clip {
-  const { tempo } = options;
-  const events: NoteEvent[] = [];
-  let offset = 0;
-  for (const segment of timemap.playOrder()) {
-    const base = timemap.tickToSeconds(segment.fromTick, tempo);
-    for (const entry of timemap.entries) {
-      if (entry.kind === 'rest' || entry.tick < segment.fromTick || entry.tick >= segment.toTick) continue;
-      const start = offset + timemap.tickToSeconds(entry.tick, tempo) - base;
-      const end = timemap.tickToSeconds(Math.min(entry.tick + entry.durationTicks, segment.toTick), tempo);
-      const duration = end - timemap.tickToSeconds(entry.tick, tempo);
-      const midis = entry.midiNotes ?? (entry.midi === undefined ? [] : [entry.midi]);
-      midis.forEach((midi, i) => events.push({ id: entry.ids[i], midi, start, duration }));
-    }
-    offset += timemap.tickToSeconds(segment.toTick, tempo) - base;
-  }
-  events.sort((a, b) => a.start - b.start);
-  return {
-    events,
-    durationSeconds: offset,
-    tickAtSeconds: (seconds) => timemap.writtenTickAtSeconds(seconds, tempo),
-  };
 }
 
 export function melodic(
