@@ -1,7 +1,6 @@
 {
   "name": "@polyhymnia/web-audio",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -21,7 +20,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc -p tsconfig.webaudio.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && tsc -p tsconfig.webaudio.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webaudio.json --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },
@@ -29,5 +28,15 @@
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adrian729/web-audio.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
