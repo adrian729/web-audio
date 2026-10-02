@@ -1,6 +1,14 @@
 {
   "name": "@polyhymnia/web-audio",
   "version": "0.1.0",
+  "description": "Web Audio playback of MIDI note events: event builders, synth, sampler and player. No dependencies.",
+  "keywords": [
+    "web-audio",
+    "music",
+    "midi",
+    "synth",
+    "sampler"
+  ],
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -40,5 +48,12 @@
   "publishConfig": {
     "access": "public"
   },
-  "packageManager": "pnpm@12.3.2"
+  "packageManager": "pnpm@12.3.2",
+  "homepage": "https://github.com/adrian729/web-audio#readme",
+  "bugs": {
+    "url": "https://github.com/adrian729/web-audio/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }
