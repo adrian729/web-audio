@@ -7,7 +7,7 @@ export interface NoteEvent {
 }
 
 export interface Clip {
-  events: NoteEvent[];
+  events: readonly NoteEvent[];
   durationSeconds: number;
 }
 

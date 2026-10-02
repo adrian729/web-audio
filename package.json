@@ -25,13 +25,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webaudio.json --noEmit && tsc -p tsconfig.test.json",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@polyhymnia/notation-engine": "workspace:*"
-  },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "@polyhymnia/mnx": "workspace:*"
+    "vitest": "^3.0.0"
   },
   "license": "MIT"
 }
