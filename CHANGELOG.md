@@ -1,5 +1,11 @@
 # @polyhymnia/web-audio
 
+## 0.3.0
+
+### Minor Changes
+
+- Expose host-controlled, feature-detected audio-session policy with conditional restoration for microphone use.
+
 ## 0.2.0
 
 ### Minor Changes
