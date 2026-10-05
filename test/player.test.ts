@@ -23,6 +23,37 @@ function fakeCtx(state = 'running', resume: () => Promise<void> = () => Promise.
 }
 
 describe('createPlayer', () => {
+  it('supports silence, validates duration before replacement, and invalidates ended clocks without stopping newer sound', async () => {
+    const { ctx, raw, oscs } = fakeCtx();
+    const stopAll = vi.fn();
+    const player = createPlayer(ctx, { noteOn: vi.fn(), stopAll });
+    const silence = player.play([], { lead: 0, durationSeconds: 2 });
+    expect(() => player.play([{ midi: 60, start: 0, duration: 1 }], { durationSeconds: 0.5 })).toThrow(RangeError);
+    raw.currentTime = 12;
+    oscs.at(-1)!.onended!();
+    expect(await silence.finished).toBe('ended');
+    expect(silence.clock?.('latencyEstimate')?.playbackTimeSeconds).toBeCloseTo(1.95);
+    player.play([], { durationSeconds: 1 });
+    silence.stop();
+    expect(silence.clock?.()).toBeUndefined();
+    expect(stopAll).not.toHaveBeenCalled();
+    player.stop();
+    expect(stopAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('pairs the output clock without double latency correction and uses only an explicitly requested fallback', () => {
+    const { ctx, raw } = fakeCtx();
+    Object.assign(raw, { baseLatency: 0.02, getOutputTimestamp: () => ({ contextTime: 10.03, performanceTime: 1000 }) });
+    const playback = createPlayer(ctx, { noteOn: () => {}, stopAll: () => {} }).play([], { durationSeconds: 2 });
+    expect(playback.clock?.('outputTimestamp')).toEqual({ performanceTimeMs: 1000, playbackTimeSeconds: 10.03 - 10.06, source: 'outputTimestamp' });
+    expect(playback.clock?.('latencyEstimate')?.playbackTimeSeconds).toBeCloseTo(-0.13);
+    Object.assign(raw, { getOutputTimestamp: () => ({ contextTime: 0, performanceTime: 0 }) });
+    expect(playback.clock?.('outputTimestamp')).toBeUndefined();
+    expect(playback.clock?.()?.source).toBe('latencyEstimate');
+    raw.state = 'suspended';
+    expect(playback.clock?.()).toBeUndefined();
+  });
+
   it('replaces the previous play, stops the instrument, and settles finished', async () => {
     const { ctx, raw, oscs } = fakeCtx();
     const calls: string[] = [];
