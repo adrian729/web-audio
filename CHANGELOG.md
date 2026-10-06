@@ -1,5 +1,11 @@
 # @polyhymnia/web-audio
 
+## 0.4.0
+
+### Minor Changes
+
+- Add `createSampler`, which loads samples as notes need them instead of every sample up front. `warm()` loads in the background, coarse to fine and at low network priority: one sample per octave (after which every note can play), then one every third semitone. `prepare(midis)` loads given notes' own samples and `canPlay(midis)` tells whether they can play now. A note never waits: until its own sample is loaded it borrows the nearest loaded one within a tritone, repitched, or plays on the `fallback` instrument. A note longer than its sample releases before the audio runs out instead of cutting off. `loadSampler` keeps loading everything before it resolves.
+
 ## 0.3.0
 
 ### Minor Changes

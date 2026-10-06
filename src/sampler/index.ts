@@ -1,1 +1,1 @@
-export { loadSampler, type Sample } from './sampler.js';
+export { createSampler, loadSampler, type Sample, type Sampler, type SamplerOptions } from './sampler.js';
