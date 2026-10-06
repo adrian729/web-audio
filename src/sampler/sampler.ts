@@ -65,39 +65,132 @@ function measure(buffer: AudioBuffer): { peak: number; onset: number } {
   return { peak, onset: onsetSample / sampleRate };
 }
 
-async function prepare(ctx: AudioContext, { midi, url }: Sample): Promise<Prepared> {
-  const response = await fetch(url);
+async function prepare(ctx: AudioContext, { midi, url }: Sample, priority: RequestPriority): Promise<Prepared> {
+  const response = await fetch(url, { priority });
   if (!response.ok) throw new Error(`failed to load sample ${url}: ${response.status}`);
   const buffer = await ctx.decodeAudioData(await response.arrayBuffer());
   const { peak, onset } = measure(buffer);
   return { midi, buffer, onset, level: peak > 0 ? LEVEL / peak : 0 };
 }
 
-export async function loadSampler(
-  ctx: AudioContext,
-  { out, samples }: { out: AudioNode; samples: readonly Sample[] },
-): Promise<Instrument> {
+/**
+ * How far a note may borrow a loaded neighbour's sample while its own is still loading: a tritone,
+ * so one sample per octave already lets every note play.
+ */
+const BORROW_SEMITONES = 6;
+/** Warm-up tiers, coarse to fine: one sample per octave, then one every third semitone. */
+const WARM_STEPS = [12, 3];
+
+export interface Sampler extends Instrument {
+  /** Loads the samples these notes play from; resolves once each can play its own. */
+  prepare(midis: Iterable<number>): Promise<void>;
+  /** Whether each of these notes can play now, from its own sample or a loaded one nearby. */
+  canPlay(midis: Iterable<number>): boolean;
+  /**
+   * Loads samples in the background, one at a time at low network priority and coarse to fine: one
+   * per octave, then one every third semitone. Resolves once the first tier is in, when every note
+   * in range can play; the finer tier continues until done or `signal` aborts. A note's exact
+   * sample still loads the first time it plays.
+   */
+  warm(signal?: AbortSignal): Promise<void>;
+}
+
+export interface SamplerOptions {
+  out: AudioNode;
+  samples: readonly Sample[];
+  /** Plays a note when no loaded sample is close enough to it, such as before the first loads. */
+  fallback?: Instrument;
+}
+
+/**
+ * A sampler that loads nothing up front: each sample is fetched, decoded and measured when a note
+ * needs it (`prepare`, `noteOn`) or when `warm` reaches it. A note never waits:
+ * until its own sample is loaded it borrows the nearest loaded one within a tritone, repitched, or
+ * plays on `fallback`.
+ */
+export function createSampler(ctx: AudioContext, { out, samples, fallback }: SamplerOptions): Sampler {
   if (samples.length === 0) throw new RangeError('sampler needs at least one sample');
-  const prepared = await Promise.all(samples.map((sample) => prepare(ctx, sample)));
   const master = ctx.createGain();
   master.gain.value = 0.7;
   const compressor = ctx.createDynamicsCompressor();
   master.connect(compressor);
   compressor.connect(out);
   const voices = new Set<Voice>();
+  const loading = new Map<Sample, Promise<Prepared>>();
+  const loaded = new Map<Sample, Prepared>();
 
-  const nearest = (midi: number) =>
-    prepared.reduce((best, s) => (Math.abs(s.midi - midi) < Math.abs(best.midi - midi) ? s : best));
+  const own = (midi: number) =>
+    samples.reduce((best, s) => (Math.abs(s.midi - midi) < Math.abs(best.midi - midi) ? s : best));
+  const load = (sample: Sample, priority: RequestPriority = 'auto'): Promise<Prepared> => {
+    let pending = loading.get(sample);
+    if (!pending) {
+      pending = prepare(ctx, sample, priority).then(
+        (prepared) => {
+          loaded.set(sample, prepared);
+          return prepared;
+        },
+        (error: unknown) => {
+          loading.delete(sample);
+          throw error;
+        },
+      );
+      loading.set(sample, pending);
+    }
+    return pending;
+  };
+  const borrowed = (midi: number): Prepared | undefined => {
+    let best: Prepared | undefined;
+    for (const prepared of loaded.values()) {
+      const distance = Math.abs(prepared.midi - midi);
+      if (distance <= BORROW_SEMITONES && (!best || distance < Math.abs(best.midi - midi))) best = prepared;
+    }
+    return best;
+  };
+  const playable = (midi: number) => loaded.has(own(midi)) || !!borrowed(midi);
+  // The sample nearest each evenly spaced pitch across the range, so any step spreads evenly.
+  const lowest = Math.min(...samples.map((s) => s.midi));
+  const highest = Math.max(...samples.map((s) => s.midi));
+  const spaced = (step: number) => {
+    const targets = [];
+    for (let midi = lowest; midi < highest; midi += step) targets.push(midi);
+    return [...new Set([...targets, highest].map(own))];
+  };
+  const loadInTurn = async (list: readonly Sample[], signal?: AbortSignal) => {
+    for (const sample of list) {
+      if (signal?.aborted) return;
+      if (!loaded.has(sample)) await load(sample, 'low').catch(() => {});
+    }
+  };
 
   return {
+    async prepare(midis) {
+      await Promise.all([...new Set([...midis].map(own))].map((sample) => load(sample)));
+    },
+    canPlay(midis) {
+      return [...midis].every(playable);
+    },
+    async warm(signal) {
+      const [first = [], ...finer] = WARM_STEPS.map(spaced);
+      await loadInTurn(first, signal);
+      void loadInTurn(finer.flat(), signal);
+    },
     noteOn(midi, when, duration, velocity = 0.8) {
-      const sample = nearest(midi);
+      const target = own(midi);
+      const sample = loaded.get(target) ?? borrowed(midi);
+      if (!loaded.has(target)) void load(target).catch(() => {});
+      if (!sample) {
+        fallback?.noteOn(midi, when, duration, velocity);
+        return;
+      }
       const source = ctx.createBufferSource();
+      const rate = 2 ** ((midi - sample.midi) / 12);
       source.buffer = sample.buffer;
-      source.playbackRate.value = 2 ** ((midi - sample.midi) / 12);
+      source.playbackRate.value = rate;
       const gain = ctx.createGain();
       const peak = sample.level * velocity;
-      const end = when + duration;
+      // A note longer than its sample releases before the audio runs out, never cutting off with a click.
+      const available = (sample.buffer.duration - sample.onset) / rate - RELEASE;
+      const end = when + Math.max(0, Math.min(duration, available));
       gain.gain.value = 0;
       gain.gain.setValueAtTime(0, when);
       gain.gain.linearRampToValueAtTime(peak, when + Math.min(ATTACK, duration / 4));
@@ -129,6 +222,17 @@ export async function loadSampler(
         source.stop(now + STOP_RAMP + 0.005);
       }
       voices.clear();
+      fallback?.stopAll();
     },
   };
+}
+
+/** A sampler with every sample loaded before it resolves. */
+export async function loadSampler(
+  ctx: AudioContext,
+  { out, samples }: { out: AudioNode; samples: readonly Sample[] },
+): Promise<Instrument> {
+  const sampler = createSampler(ctx, { out, samples });
+  await sampler.prepare(samples.map((sample) => sample.midi));
+  return sampler;
 }

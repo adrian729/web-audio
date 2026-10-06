@@ -19,3 +19,7 @@ The `./webaudio` entry also provides sample-free rhythm voices: `clickInstrument
 ## Microphone audio-session policy
 
 Hosts sharing playback and microphone capture can call `setAudioSessionPolicy('play-and-record')` from `@polyhymnia/web-audio/webaudio`. It returns `{ supported, restore }`, feature-detects the browser API, and works before or after the shared context exists. Restore when the host releases capture; restoration is conditional so an older handle cannot overwrite a newer host policy. The host coordinates global policy ownership. This API neither requests microphone access nor captures sound. Existing playback creation keeps its default policy when no explicit host policy is active.
+
+## Sample player
+
+`createSampler(ctx, { out, samples, fallback? })` from `@polyhymnia/web-audio/sampler` loads nothing up front. `warm(signal?)` loads in the background, one sample at a time at low network priority and coarse to fine: one per octave (it resolves then, when every note can play), then one every third semitone. `prepare(midis)` loads given notes' own samples and `canPlay(midis)` tells whether they can play now. A note never waits: until its own sample is loaded it borrows the nearest loaded one within a tritone, repitched, or plays on `fallback`, and a note longer than its sample releases before the audio runs out. `loadSampler(ctx, { out, samples })` resolves once every sample is loaded.
